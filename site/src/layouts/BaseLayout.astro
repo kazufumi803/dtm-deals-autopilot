@@ -1,0 +1,86 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = '海外のDTMプラグイン・ソフト音源の最新セール情報・期間限定無料配布（Freebie）情報をAIで最速解説するDTMer向け特化メディア',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="ja" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title} | SYNTH & PLUGIN DEAL RADAR</title>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- Top Studio Header -->
+    <header class="sticky top-0 z-50 border-b border-slate-800/80 bg-studio-950/85 backdrop-blur-xl">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400/20 to-purple-600/30 border border-teal-400/40 flex items-end justify-center gap-0.5 p-2 shadow-lg shadow-teal-500/10">
+            <span class="w-1 h-full bg-teal-400 rounded-full origin-bottom eq-bar-1"></span>
+            <span class="w-1 h-full bg-cyan-400 rounded-full origin-bottom eq-bar-2"></span>
+            <span class="w-1 h-full bg-purple-400 rounded-full origin-bottom eq-bar-3"></span>
+            <span class="w-1 h-full bg-pink-400 rounded-full origin-bottom eq-bar-4"></span>
+          </div>
+          <div>
+            <span class="font-mono text-xs uppercase tracking-widest text-teal-400 block leading-none">
+              Audio Production Deals & Freebies
+            </span>
+            <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-teal-300 transition-colors">
+              PLUGIN DEAL <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-purple-400">RADAR</span>
+            </span>
+          </div>
+        </a>
+
+        <nav class="flex items-center gap-2 sm:gap-4 text-sm">
+          <a
+            href="/#deals-grid"
+            class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition"
+          >
+            最新記事一覧
+          </a>
+          <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-teal-500/10 text-teal-300 border border-teal-500/20">
+            <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            AUTO-UPDATED 24/7
+          </span>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-studio-900/60 mt-20">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div>
+          <p class="font-semibold text-slate-300">PLUGIN DEAL RADAR — 海外DTMセール＆無料配布プラグイン自動収集メディア</p>
+          <p class="mt-1">
+            ※当サイトの記事にはアフィリエイトリンクが含まれる場合があります。価格やセール期間は予告なく変更されるため、必ずリンク先の公式ストアにて最新情報をご確認ください。
+          </p>
+        </div>
+        <div class="font-mono text-slate-500 shrink-0">
+          Powered by Astro &amp; Gemini 2.5 Flash
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

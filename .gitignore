@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+
+# Node / Astro
+node_modules/
+site/node_modules/
+site/dist/
+site/.astro/
+npm-debug.log*
+
+# Environment Variables / Secrets
+.env
+.env.local
+.env.*.local
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Unrelated workspace files in parent directory
+/audio-test/
+/booth-shoping/
+/app.js
+/index.html
+/math-topology.js
+/standalone.html
+/style.css
+/synth-audio.js
+/torus-visualizer.js

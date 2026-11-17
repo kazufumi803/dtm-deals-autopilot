@@ -1,0 +1,104 @@
+name: Auto Publish DTM Deals & Freebies
+
+on:
+  schedule:
+    # 日本時間の朝7時 (22:00 UTC) と 夜19時 (10:00 UTC) に定期実行
+    - cron: '0 22,10 * * *'
+  workflow_dispatch:
+    inputs:
+      max_items:
+        description: '1回の実行で処理する最大記事数'
+        required: false
+        default: '2'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-publish-dtm-deals
+  cancel-in-progress: false
+
+jobs:
+  collect-generate-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      AFFILIATE_TAG_PB: ${{ secrets.AFFILIATE_TAG_PB }}
+      AFFILIATE_TAG_AMAZON: ${{ secrets.AFFILIATE_TAG_AMAZON }}
+      SITE_URL: ${{ secrets.SITE_URL || 'https://dtm-deals.example.com' }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
+      X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+      X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      MAX_ITEMS_PER_RUN: ${{ github.event.inputs.max_items || '2' }}
+      ASTRO_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'scripts/requirements.txt'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements.txt
+
+      - name: Run fetcher, affiliate converter & Gemini article generator
+        run: |
+          # 前回未送信分のX投稿を消化し、今回の新規記事を生成・キューイング
+          python scripts/main.py --defer-x --max-items "${MAX_ITEMS_PER_RUN}"
+
+      - name: Set up Node.js & Verify Astro static site build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'site/package-lock.json'
+        continue-on-error: true
+
+      - name: Build Astro site to verify generated Markdown
+        working-directory: site
+        run: |
+          npm install
+          npm run build
+
+      - name: Commit & Push generated deals and state files
+        id: commit_deals
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/posted_ids.json data/pending_tweets.json site/src/content/deals/
+          if git diff --staged --quiet; then
+            echo "No new deals or state changes to commit."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: auto-publish new deals [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || true
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for static site deployment & Post pending deals to X
+        if: steps.commit_deals.outputs.pushed == 'true'
+        run: |
+          echo "Waiting 60 seconds for static site deployment before posting to X..."
+          sleep 60
+          python scripts/main.py --post-pending
+
+          git add data/pending_tweets.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update pending tweets queue [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || true
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

@@ -1,0 +1,202 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const allDeals = await getCollection('deals');
+const sortedDeals = allDeals.sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const freeCount = sortedDeals.filter((d) => d.data.category === 'Free').length;
+const saleCount = sortedDeals.filter((d) => d.data.category === 'Sale').length;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+---
+
+<BaseLayout title="最新DTMプラグインセール＆無料配布情報">
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden border-b border-slate-800/70 py-14 sm:py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono mb-5">
+          <span>VST / AU / AAX / KONTAKT / SAMPLES</span>
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+          海外DTMプラグインの<br />
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-cyan-400 to-purple-400">
+            特選セール＆無料配布
+          </span>
+          をリアルタイム追跡
+        </h1>
+        <p class="mt-4 text-slate-300 text-base sm:text-lg leading-relaxed">
+          Reddit <code class="text-teal-300 font-mono text-sm">r/AudioProductionDeals</code> や <code class="text-teal-300 font-mono text-sm">KVR Audio</code> から世界中のプラグインセール・期間限定Freebie情報を自動収集。サウンドの特徴や具体的なトラックメイクでの使い所を日本語で分かりやすく解説します。
+        </p>
+
+        <!-- Stats Pills -->
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <div class="px-4 py-2 rounded-xl bg-studio-900/90 border border-slate-800 flex items-center gap-2.5">
+            <span class="text-xs font-mono uppercase text-slate-400">Total Deals</span>
+            <span class="text-lg font-bold text-white font-mono">{sortedDeals.length}</span>
+          </div>
+          <div class="px-4 py-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-mono uppercase text-emerald-300">Freebies</span>
+            <span class="text-lg font-bold text-emerald-200 font-mono">{freeCount}</span>
+          </div>
+          <div class="px-4 py-2 rounded-xl bg-amber-950/40 border border-amber-500/30 flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="text-xs font-mono uppercase text-amber-300">Hot Sales</span>
+            <span class="text-lg font-bold text-amber-200 font-mono">{saleCount}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter & Deals Grid -->
+  <section id="deals-grid" class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          data-filter="all"
+          class="filter-btn active px-4 py-2 rounded-xl text-sm font-bold transition bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20"
+        >
+          すべて ({sortedDeals.length})
+        </button>
+        <button
+          type="button"
+          data-filter="Free"
+          class="filter-btn px-4 py-2 rounded-xl text-sm font-bold transition bg-studio-900 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-950/50"
+        >
+          🎁 無料配布 Free ({freeCount})
+        </button>
+        <button
+          type="button"
+          data-filter="Sale"
+          class="filter-btn px-4 py-2 rounded-xl text-sm font-bold transition bg-studio-900 text-amber-300 border border-amber-500/30 hover:bg-amber-950/50"
+        >
+          🔥 セール Sale ({saleCount})
+        </button>
+      </div>
+
+      <div class="relative">
+        <input
+          id="deal-search"
+          type="search"
+          placeholder="プラグイン名・キーワードで絞り込み..."
+          class="w-full sm:w-72 px-4 py-2 rounded-xl bg-studio-900 border border-slate-700/80 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-400 transition"
+        />
+      </div>
+    </div>
+
+    {sortedDeals.length === 0 ? (
+      <div class="rounded-2xl border border-slate-800 bg-studio-900/60 p-12 text-center">
+        <p class="text-lg font-semibold text-slate-300">現在公開中のセール記事はまだありません。</p>
+        <p class="text-sm text-slate-500 mt-2">GitHub Actions または <code class="font-mono text-teal-400">python scripts/main.py</code> の実行により自動的に記事が追加されます。</p>
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="cards-container">
+        {sortedDeals.map((deal) => {
+          const isFree = deal.data.category === 'Free';
+          return (
+            <article
+              data-category={deal.data.category}
+              data-title={deal.data.title.toLowerCase()}
+              class="deal-card group relative flex flex-col justify-between rounded-2xl bg-studio-900/80 border border-slate-800/90 hover:border-teal-400/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/5 overflow-hidden"
+            >
+              <!-- Top Accent Bar -->
+              <div
+                class:list={[
+                  'h-1.5 w-full',
+                  isFree
+                    ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400'
+                    : 'bg-gradient-to-r from-amber-400 via-orange-500 to-purple-500',
+                ]}
+              />
+
+              <div class="p-6 flex-1 flex flex-col">
+                <div class="flex items-center justify-between gap-2 mb-4">
+                  <span
+                    class:list={[
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold tracking-wide uppercase',
+                      isFree
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/40'
+                        : 'bg-amber-500/15 text-amber-300 border border-amber-400/40',
+                    ]}
+                  >
+                    {isFree ? '🎁 FREEBIE / 無料配布' : '🔥 SALE / 割引セール'}
+                  </span>
+                  <time
+                    datetime={deal.data.pubDate.toISOString()}
+                    class="font-mono text-xs text-slate-400"
+                  >
+                    {formatDate(deal.data.pubDate)}
+                  </time>
+                </div>
+
+                <h2 class="text-lg font-bold text-white group-hover:text-teal-300 transition-colors leading-snug mb-4 line-clamp-3">
+                  <a href={`/deals/${deal.slug}`} class="after:absolute after:inset-0">
+                    {deal.data.title}
+                  </a>
+                </h2>
+
+                <div class="mt-auto pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-semibold">
+                  <span class="text-slate-400 group-hover:text-slate-200 transition">
+                    解説＆活用シーンを読む
+                  </span>
+                  <span class="text-teal-400 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                    詳細へ &rarr;
+                  </span>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </section>
+
+  <script>
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+    const searchInput = document.getElementById('deal-search') as HTMLInputElement | null;
+    const cards = document.querySelectorAll<HTMLElement>('.deal-card');
+
+    let currentCategory = 'all';
+    let currentQuery = '';
+
+    function applyFilter() {
+      cards.forEach((card) => {
+        const cat = card.getAttribute('data-category') || '';
+        const title = card.getAttribute('data-title') || '';
+        const matchCat = currentCategory === 'all' || cat === currentCategory;
+        const matchQuery = !currentQuery || title.includes(currentQuery);
+        card.style.display = matchCat && matchQuery ? '' : 'none';
+      });
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentCategory = btn.getAttribute('data-filter') || 'all';
+        buttons.forEach((b) => {
+          b.classList.remove('bg-teal-400', 'text-slate-950', 'shadow-lg', 'shadow-teal-500/20');
+          b.classList.add('bg-studio-900', 'text-slate-300');
+        });
+        btn.classList.remove('bg-studio-900', 'text-slate-300');
+        btn.classList.add('bg-teal-400', 'text-slate-950', 'shadow-lg', 'shadow-teal-500/20');
+        applyFilter();
+      });
+    });
+
+    searchInput?.addEventListener('input', (e) => {
+      currentQuery = (e.target as HTMLInputElement).value.trim().toLowerCase();
+      applyFilter();
+    });
+  </script>
+</BaseLayout>
