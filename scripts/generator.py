@@ -11,8 +11,13 @@ from slugify import slugify
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
-FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-2.5-flash"]
+MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+FALLBACK_MODELS = [
+    MODEL_NAME,
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+]
 
 
 class DealArticleOutput(BaseModel):
@@ -111,39 +116,43 @@ def generate_deal_content(
         f"英語要約・詳細テキスト:\n{english_summary or '(要約なし・タイトルから推測して解説を作成してください)'}\n"
     )
 
+    models_to_try = list(dict.fromkeys(FALLBACK_MODELS))
     for attempt in range(1, max_retries + 1):
-        try:
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=user_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    response_mime_type="application/json",
-                    response_schema=DealArticleOutput,
-                    temperature=0.4,
-                ),
-            )
+        for current_model in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=current_model,
+                    contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        response_mime_type="application/json",
+                        response_schema=DealArticleOutput,
+                        temperature=0.4,
+                    ),
+                )
 
-            parsed: DealArticleOutput | None = getattr(response, "parsed", None)
-            if parsed is None and response.text:
-                raw_dict = json.loads(response.text)
-                parsed = DealArticleOutput.model_validate(raw_dict)
+                parsed: DealArticleOutput | None = getattr(response, "parsed", None)
+                if parsed is None and response.text:
+                    raw_dict = json.loads(response.text)
+                    parsed = DealArticleOutput.model_validate(raw_dict)
 
-            if parsed is None:
-                raise ValueError("Gemini API から有効なJSONレスポンスが得られませんでした。")
+                if parsed is None:
+                    raise ValueError("Gemini API から有効なJSONレスポンスが得られませんでした。")
 
-            return _normalize_output(parsed, fallback_title=english_title)
+                logger.info("Gemini API 生成成功 (model=%s): %s", current_model, english_title[:50])
+                return _normalize_output(parsed, fallback_title=english_title)
 
-        except Exception as exc:
-            logger.warning(
-                "Gemini API 生成失敗 (%s) [試行 %d/%d]: %s",
-                english_title[:50],
-                attempt,
-                max_retries,
-                exc,
-            )
-            if attempt < max_retries:
-                time.sleep(backoff_sec * (2 ** (attempt - 1)))
+            except Exception as exc:
+                logger.warning(
+                    "Gemini API 生成失敗 (model=%s, title=%s) [試行 %d/%d]: %s",
+                    current_model,
+                    english_title[:40],
+                    attempt,
+                    max_retries,
+                    exc,
+                )
+        if attempt < max_retries:
+            time.sleep(backoff_sec * attempt)
 
     logger.error("Gemini API での記事生成をスキップします: %s", english_title)
     return None
