@@ -1,11 +1,14 @@
 import argparse
+import html
 import logging
 import os
 import re
 import subprocess
 import time
+import webbrowser
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import requests
 
@@ -18,6 +21,15 @@ logger = logging.getLogger("gsc_setup")
 ROOT_DIR = Path(__file__).resolve().parent.parent
 BASE_LAYOUT_PATH = ROOT_DIR / "site" / "src" / "layouts" / "BaseLayout.astro"
 DEFAULT_SITE_URL = "https://dtm-deals-autopilot.pages.dev/"
+
+# Google Cloud SDK Application Default Credentials Public Installed-App Client
+OAUTH_CLIENT_ID = "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com"
+OAUTH_CLIENT_SECRET = "d-FL95Q19q7MQmFpd7hHD0Ty"
+OAUTH_REDIRECT_URI = "http://localhost:8085/"
+OAUTH_SCOPES = [
+    "https://www.googleapis.com/auth/siteverification",
+    "https://www.googleapis.com/auth/webmasters",
+]
 
 
 def extract_token(raw_input: str) -> str:
@@ -36,7 +48,6 @@ def inject_token_into_base_layout(token: str, layout_path: Path = BASE_LAYOUT_PA
         return False
 
     content = layout_path.read_text(encoding="utf-8")
-    # 既存のフォールバック空文字またはトークン文字列を置換
     pattern = r"(process\.env\.GOOGLE_SITE_VERIFICATION\s*\|\|\s*)['\"][^'\"]*['\"]"
     replacement = f"\\1'{clean_token}'"
     new_content, count = re.subn(pattern, replacement, content, count=1)
@@ -100,8 +111,8 @@ def api_verify_site_and_submit_sitemap(access_token: str, site_url: str = DEFAUL
 def git_commit_and_push(message: str = "chore(seo): add google-site-verification meta tag") -> None:
     """変更された BaseLayout.astro を GitHub main ブランチへ Commit & Push する。"""
     git_candidates = [
-        "git",
         r"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\cmd\git.exe",
+        "git",
     ]
     git_bin = next((g for g in git_candidates if os.path.exists(g) or g == "git"), "git")
     subprocess.run([git_bin, "add", "site/src/layouts/BaseLayout.astro"], cwd=ROOT_DIR, check=True)
@@ -110,7 +121,7 @@ def git_commit_and_push(message: str = "chore(seo): add google-site-verification
     subprocess.run([git_bin, "push", "origin", "main"], cwd=ROOT_DIR, check=True)
 
 
-def wait_for_meta_tag_on_live_site(token: str, site_url: str = DEFAULT_SITE_URL, timeout_sec: int = 90) -> bool:
+def wait_for_meta_tag_on_live_site(token: str, site_url: str = DEFAULT_SITE_URL, timeout_sec: int = 120) -> bool:
     """Cloudflare Pages 上のトップページに google-site-verification メタタグが反映されるまで待機する。"""
     clean_token = extract_token(token)
     deadline = time.time() + timeout_sec
@@ -126,6 +137,105 @@ def wait_for_meta_tag_on_live_site(token: str, site_url: str = DEFAULT_SITE_URL,
     return False
 
 
+def build_oauth_authorize_url() -> str:
+    params = {
+        "client_id": OAUTH_CLIENT_ID,
+        "redirect_uri": OAUTH_REDIRECT_URI,
+        "response_type": "code",
+        "scope": " ".join(OAUTH_SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+def exchange_code_for_access_token(code: str) -> str:
+    resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": OAUTH_CLIENT_ID,
+            "client_secret": OAUTH_CLIENT_SECRET,
+            "redirect_uri": OAUTH_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        },
+        timeout=20,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def run_local_oauth_and_auto_register(site_url: str = DEFAULT_SITE_URL, timeout_sec: int = 300) -> bool:
+    """
+    ローカルポート 8085 で OAuth2 コールバックを待ち受け、
+    ユーザーがブラウザで1クリック承認した瞬間にアクセストークンを取得して
+    Site Verification 取得 → BaseLayout.astro 更新＆Push → Cloudflare 反映待機 → Verify → Sitemap 送信
+    まで全自動で完遂する。
+    """
+    auth_url = build_oauth_authorize_url()
+    captured: dict[str, str] = {}
+
+    class OAuthCallbackHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            qs = parse_qs(parsed.query)
+            if "code" in qs:
+                captured["code"] = qs["code"][0]
+                body = (
+                    "<html><head><meta charset='utf-8'><title>認証完了</title></head>"
+                    "<body style='background:#07090e;color:#e2e8f0;font-family:sans-serif;padding:40px;text-align:center;'>"
+                    "<h2 style='color:#00f5d4;'>Google 認証が完了しました！</h2>"
+                    "<p>現在バックグラウンドで メタタグ取得 → GitHub Push → Cloudflareデプロイ待機 → 所有権Verify → sitemap.xml送信 を全自動実行中です。</p>"
+                    "<p>このタブは閉じて構いません。</p></body></html>"
+                )
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(body.encode("utf-8"))
+            else:
+                err = html.escape(qs.get("error", ["unknown"])[0])
+                captured["error"] = err
+                self.send_response(400)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(f"OAuth Error: {err}".encode("utf-8"))
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    server = HTTPServer(("127.0.0.1", 8085), OAuthCallbackHandler)
+    server.timeout = 1.0
+
+    logger.info("=================================================================")
+    logger.info("以下の Google OAuth 承認URLをブラウザで開いてアカウントを1クリック承認してください:")
+    logger.info("%s", auth_url)
+    logger.info("=================================================================")
+    try:
+        webbrowser.open(auth_url)
+    except Exception:
+        pass
+
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline and "code" not in captured and "error" not in captured:
+        server.handle_request()
+    server.server_close()
+
+    if "code" not in captured:
+        logger.error("OAuth 承認コードを取得できませんでした (%s)", captured.get("error", "timeout"))
+        return False
+
+    logger.info("OAuth 承認コードを受信しました。アクセストークンへ交換中...")
+    access_token = exchange_code_for_access_token(captured["code"])
+    token = api_get_verification_token(access_token, site_url=site_url)
+    changed = inject_token_into_base_layout(token)
+    if changed:
+        git_commit_and_push()
+        wait_for_meta_tag_on_live_site(token, site_url=site_url)
+    api_verify_site_and_submit_sitemap(access_token, site_url=site_url)
+    logger.info("Google Search Console の所有権確認と sitemap.xml の自動送信がすべて完了しました！")
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Google Search Console 自動設定・サイトマップ送信スクリプト")
     parser.add_argument(
@@ -139,6 +249,11 @@ def main() -> int:
         help="Google OAuth2 アクセストークン（指定時は API 経由で取得・Verify・サイトマップ送信まで全自動実行）",
     )
     parser.add_argument(
+        "--oauth-local",
+        action="store_true",
+        help="ローカルポート8085でOAuth認証を起動し、1クリック承認後に全自動でメタタグ取得・Push・Verify・sitemap送信を行う",
+    )
+    parser.add_argument(
         "--site-url",
         default=DEFAULT_SITE_URL,
         help="対象サイトURL（末尾スラッシュ付き）",
@@ -149,6 +264,10 @@ def main() -> int:
         help="BaseLayout.astro 更新後に自動で git commit & push を実行する",
     )
     args = parser.parse_args()
+
+    if args.oauth_local:
+        ok = run_local_oauth_and_auto_register(site_url=args.site_url)
+        return 0 if ok else 1
 
     if args.access_token:
         token = api_get_verification_token(args.access_token, site_url=args.site_url)
