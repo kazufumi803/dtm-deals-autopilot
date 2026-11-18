@@ -7,6 +7,7 @@ const dealsCollection = defineCollection({
     pubDate: z.coerce.date(),
     category: z.enum(['Free', 'Sale']),
     affiliateUrl: z.string().url(),
+    tweetText: z.string().optional(),
   }),
 });
 

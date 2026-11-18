@@ -67,6 +67,7 @@ def build_markdown_document(
     category: str,
     affiliate_url: str,
     summary_md: str,
+    tweet_text: str = "",
 ) -> str:
     """
     Astro Content Collections 用の Frontmatter 付き Markdown を生成する。
@@ -80,11 +81,17 @@ def build_markdown_document(
         f"pubDate: {json.dumps(pub_date, ensure_ascii=False)}",
         f"category: {json.dumps(valid_category, ensure_ascii=False)}",
         f"affiliateUrl: {json.dumps(affiliate_url, ensure_ascii=False)}",
-        "---",
-        "",
-        enriched_body.strip(),
-        "",
     ]
+    if tweet_text:
+        frontmatter_lines.append(f"tweetText: {json.dumps(tweet_text.strip(), ensure_ascii=False)}")
+    frontmatter_lines.extend(
+        [
+            "---",
+            "",
+            enriched_body.strip(),
+            "",
+        ]
+    )
     return "\n".join(frontmatter_lines)
 
 
@@ -96,6 +103,7 @@ def save_markdown_article(
     affiliate_url: str,
     summary_md: str,
     deals_dir: Path = DEFAULT_DEALS_DIR,
+    tweet_text: str = "",
 ) -> tuple[Path, str]:
     """
     `/site/src/content/deals/{slug}.md` に記事を保存する。
@@ -116,6 +124,7 @@ def save_markdown_article(
         category=category,
         affiliate_url=affiliate_url,
         summary_md=summary_md,
+        tweet_text=tweet_text,
     )
     target_path.write_text(md_content, encoding="utf-8")
     logger.info("Markdown記事を保存しました: %s", target_path)
@@ -228,6 +237,7 @@ def run_pipeline(
                 affiliate_url=affiliate_url,
                 summary_md=summary_md,
                 deals_dir=deals_dir,
+                tweet_text=generated.get("tweet_text", ""),
             )
 
             # 6. 処理済みIDを追記して即時保存（途中クラッシュ時の重複防止、最新500件保持）
