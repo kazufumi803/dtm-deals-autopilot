@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from affiliate import (  # noqa: E402
     convert_links_in_text,
+    ensure_amazon_gear_section,
     resolve_entry_affiliate_url,
     retroactively_apply_affiliate_links,
 )
@@ -72,6 +73,7 @@ def build_markdown_document(
     JSON文字列エンコードを用いることでコロンや引用符を含むタイトルでもYAMLパースエラーを防ぐ。
     """
     valid_category = "Free" if category == "Free" else "Sale"
+    enriched_body = ensure_amazon_gear_section(summary_md.strip())
     frontmatter_lines = [
         "---",
         f"title: {json.dumps(title, ensure_ascii=False)}",
@@ -80,7 +82,7 @@ def build_markdown_document(
         f"affiliateUrl: {json.dumps(affiliate_url, ensure_ascii=False)}",
         "---",
         "",
-        summary_md.strip(),
+        enriched_body.strip(),
         "",
     ]
     return "\n".join(frontmatter_lines)
@@ -176,7 +178,7 @@ def run_pipeline(
     7. 即時または遅延キュー経由でXに投稿 (`publisher`)
     """
     # 0. 環境変数にアフィリエイトタグが設定されていれば、既存の全公開済みMarkdown記事にも自動で遡及適用する
-    retroactively_apply_affiliate_links(deals_dir=deals_dir)
+    retroactively_apply_affiliate_links(deals_dir=deals_dir, include_amazon_section=True)
 
     # 1. 前回分の待機ツイートがあれば先に消化
     flush_pending_tweets(pending_path=pending_tweets_path)
@@ -295,7 +297,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.retro_affiliate:
-        retroactively_apply_affiliate_links()
+        retroactively_apply_affiliate_links(include_amazon_section=True)
         return 0
     if args.post_pending:
         flush_pending_tweets()

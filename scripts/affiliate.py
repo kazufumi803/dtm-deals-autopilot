@@ -10,6 +10,34 @@ logger = logging.getLogger(__name__)
 
 URL_REGEX = re.compile(r"https?://[^\s<>\"')\]]+", re.IGNORECASE)
 DEFAULT_DEALS_DIR = Path(__file__).resolve().parent.parent / "site" / "src" / "content" / "deals"
+DEFAULT_AMAZON_ASSOCIATE_TAG = "dtmdeals803-22"
+AMAZON_SECTION_HEADING = "## あわせてチェックしたいDTM機材・音源（Amazon）"
+
+
+def build_amazon_gear_section(amazon_tag: str | None = None) -> str:
+    """
+    記事下部に自動挿入する「あわせてチェックしたいDTM機材・音源（Amazon）」のMarkdownセクションを生成する。
+    """
+    tag = (amazon_tag or os.environ.get("AFFILIATE_TAG_AMAZON") or DEFAULT_AMAZON_ASSOCIATE_TAG).strip()
+    return (
+        f"{AMAZON_SECTION_HEADING}\n\n"
+        "プラグインやソフト音源のポテンシャルを最大限に引き出すための定番DTM機材・関連アイテムもAmazonでチェックできます：\n\n"
+        f"- 🎧 **[定番モニターヘッドホン・モニタースピーカーを探す（Amazon）](https://www.amazon.co.jp/s?k=%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%BC%E3%83%98%E3%83%83%E3%83%89%E3%83%9B%E3%83%B3+DTM&tag={tag})**\n"
+        f"- 🎛️ **[人気オーディオインターフェース一覧を見る（Amazon）](https://www.amazon.co.jp/s?k=%E3%82%AA%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%95%E3%82%A7%E3%83%BC%E3%82%B9+DTM&tag={tag})**\n"
+        f"- 🎹 **[MIDIキーボード・パッドコントローラーを探す（Amazon）](https://www.amazon.co.jp/s?k=MIDI%E3%82%AD%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%89+DTM&tag={tag})**\n"
+        f"- 💿 **[DTMソフト音源・DAW・プラグインセール品を探す（Amazon）](https://www.amazon.co.jp/s?k=DTM+%E3%82%BD%E3%83%95%E3%83%88%E9%9F%B3%E6%BA%90+%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3&tag={tag})**"
+    )
+
+
+def ensure_amazon_gear_section(markdown_text: str, amazon_tag: str | None = None) -> str:
+    """
+    Markdown本文にAmazon関連DTM機材セクションが含まれていなければ末尾に自動追加する。
+    """
+    stripped = markdown_text.rstrip()
+    if AMAZON_SECTION_HEADING in stripped:
+        return stripped + "\n"
+    section = build_amazon_gear_section(amazon_tag=amazon_tag)
+    return f"{stripped}\n\n{section}\n"
 
 
 def _parse_tag_param(raw_tag: str, default_key: str) -> dict[str, str]:
@@ -109,11 +137,15 @@ def resolve_entry_affiliate_url(entry: dict[str, Any]) -> str:
     return convert_affiliate_url(primary_url)
 
 
-def retroactively_apply_affiliate_links(deals_dir: Path = DEFAULT_DEALS_DIR) -> int:
+def retroactively_apply_affiliate_links(
+    deals_dir: Path = DEFAULT_DEALS_DIR,
+    include_amazon_section: bool = False,
+) -> int:
     """
     すでに公開済みの全Markdown記事（`site/src/content/deals/*.md`）を走査し、
     Frontmatter (`affiliateUrl`) および本文内の全対象リンクに対して、
     現在設定されている `AFFILIATE_TAG_PB` / `AFFILIATE_TAG_AMAZON` を一括遡及付与する。
+    `include_amazon_section=True` の場合は関連DTM機材セクションも自動補完する。
     更新されたファイル数を返す。
     """
     if not deals_dir.exists():
@@ -121,7 +153,7 @@ def retroactively_apply_affiliate_links(deals_dir: Path = DEFAULT_DEALS_DIR) -> 
 
     pb_tag = os.environ.get("AFFILIATE_TAG_PB", "").strip()
     amazon_tag = os.environ.get("AFFILIATE_TAG_AMAZON", "").strip()
-    if not pb_tag and not amazon_tag:
+    if not pb_tag and not amazon_tag and not include_amazon_section:
         return 0
 
     updated_count = 0
@@ -129,6 +161,9 @@ def retroactively_apply_affiliate_links(deals_dir: Path = DEFAULT_DEALS_DIR) -> 
         try:
             original = md_path.read_text(encoding="utf-8")
             updated = convert_links_in_text(original)
+            if include_amazon_section:
+                updated = ensure_amazon_gear_section(updated, amazon_tag=amazon_tag or DEFAULT_AMAZON_ASSOCIATE_TAG)
+                updated = convert_links_in_text(updated)
             if updated != original:
                 md_path.write_text(updated, encoding="utf-8")
                 updated_count += 1

@@ -100,7 +100,7 @@ def register_secrets_and_retro_push(amazon_tag: str = "", pb_tag: str = "") -> N
             )
             logger.info("GitHub Secrets に AFFILIATE_TAG_PB (%s) を登録しました。", pb_tag.strip())
 
-    updated = retroactively_apply_affiliate_links()
+    updated = retroactively_apply_affiliate_links(include_amazon_section=True)
     logger.info("既存記事 %d 件にアフィリエイトタグを遡及適用しました。", updated)
 
     if updated > 0 and os.path.exists(git_bin):
