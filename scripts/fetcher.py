@@ -16,16 +16,22 @@ logger = logging.getLogger(__name__)
 RSS_FEEDS = [
     {
         "name": "Reddit r/AudioProductionDeals",
-        "url": "https://www.reddit.com/r/AudioProductionDeals/new/.rss",
+        "url": "https://old.reddit.com/r/AudioProductionDeals/new/.rss",
+        "fallback_url": "https://www.reddit.com/r/AudioProductionDeals/new/.rss",
     },
     {
         "name": "KVR Audio Deals & Free",
         "url": "https://www.kvraudio.com/rss/kvr_deals.rss",
+        "fallback_url": "https://bedroomproducersblog.com/feed/",
     },
 ]
 
 DEFAULT_POSTED_IDS_PATH = Path(__file__).resolve().parent.parent / "data" / "posted_ids.json"
-USER_AGENT = "DTMDealsAutoPublisher/1.0 (+https://github.com/dtm-deals-bot)"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
 
 
 def compute_entry_id(url: str, guid: str = "") -> str:
@@ -147,6 +153,10 @@ def fetch_unprocessed_entries(
         logger.info("フィード取得中: %s (%s)", feed_name, feed_url)
 
         raw_bytes = _fetch_rss_content(feed_url)
+        if not raw_bytes and feed_info.get("fallback_url"):
+            fallback_url = feed_info["fallback_url"]
+            logger.info("フォールバックフィードを試行中: %s (%s)", feed_name, fallback_url)
+            raw_bytes = _fetch_rss_content(fallback_url)
         if not raw_bytes:
             continue
 
