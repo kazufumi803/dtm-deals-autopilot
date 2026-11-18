@@ -14,7 +14,11 @@ ROOT_DIR = SCRIPT_DIR.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from affiliate import convert_links_in_text, resolve_entry_affiliate_url  # noqa: E402
+from affiliate import (  # noqa: E402
+    convert_links_in_text,
+    resolve_entry_affiliate_url,
+    retroactively_apply_affiliate_links,
+)
 from fetcher import (  # noqa: E402
     DEFAULT_POSTED_IDS_PATH,
     fetch_unprocessed_entries,
@@ -171,6 +175,9 @@ def run_pipeline(
     6. `/data/posted_ids.json` にIDを追記保存（最新500件保持）
     7. 即時または遅延キュー経由でXに投稿 (`publisher`)
     """
+    # 0. 環境変数にアフィリエイトタグが設定されていれば、既存の全公開済みMarkdown記事にも自動で遡及適用する
+    retroactively_apply_affiliate_links(deals_dir=deals_dir)
+
     # 1. 前回分の待機ツイートがあれば先に消化
     flush_pending_tweets(pending_path=pending_tweets_path)
 
@@ -272,6 +279,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="pending_tweets.json に溜まっている未投稿ツイートのみを送信する",
     )
     parser.add_argument(
+        "--retro-affiliate",
+        action="store_true",
+        help="公開済みの全Markdown記事にアフィリエイトタグを一括遡及適用する",
+    )
+    parser.add_argument(
         "--post-delay",
         type=float,
         default=float(os.environ.get("POST_DELAY_SECONDS", "0")),
@@ -282,6 +294,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.retro_affiliate:
+        retroactively_apply_affiliate_links()
+        return 0
     if args.post_pending:
         flush_pending_tweets()
         return 0

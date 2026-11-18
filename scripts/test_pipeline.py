@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import affiliate  # noqa: E402
 import fetcher  # noqa: E402
 import generator  # noqa: E402
+import gsc_setup  # noqa: E402
 import main as pipeline_main  # noqa: E402
 import publisher  # noqa: E402
 
@@ -201,6 +202,58 @@ class TestDTMDealsPipeline(unittest.TestCase):
                     pipeline_main.flush_pending_tweets(pending_path=pending_path, delay_between_sec=0)
                     cleaned = json.loads(pending_path.read_text(encoding="utf-8"))
                     self.assertEqual(cleaned, [])
+
+    def test_retroactive_affiliate_links_on_existing_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            deals_dir = Path(tmpdir)
+            md_file = deals_dir / "existing-deal.md"
+            md_file.write_text(
+                '---\n'
+                'title: "【セール】テストシンセ"\n'
+                'pubDate: "2026-11-18T00:00:00Z"\n'
+                'category: "Sale"\n'
+                'affiliateUrl: "https://www.pluginboutique.com/products/1234"\n'
+                '---\n\n'
+                '詳細はこちら: https://www.amazon.co.jp/dp/B012345678\n',
+                encoding="utf-8",
+            )
+
+            with patch.dict(
+                os.environ,
+                {"AFFILIATE_TAG_PB": "retro_pb_99", "AFFILIATE_TAG_AMAZON": "retroamz-22"},
+                clear=False,
+            ):
+                updated_count = affiliate.retroactively_apply_affiliate_links(deals_dir=deals_dir)
+                self.assertEqual(updated_count, 1)
+
+                updated_text = md_file.read_text(encoding="utf-8")
+                self.assertIn(
+                    'affiliateUrl: "https://www.pluginboutique.com/products/1234?a_aid=retro_pb_99"',
+                    updated_text,
+                )
+                self.assertIn("https://www.amazon.co.jp/dp/B012345678?tag=retroamz-22", updated_text)
+
+                # 2回目の実行では変更なし（冪等性）を確認
+                second_count = affiliate.retroactively_apply_affiliate_links(deals_dir=deals_dir)
+                self.assertEqual(second_count, 0)
+
+    def test_gsc_token_extraction_and_injection(self) -> None:
+        raw_meta = '<meta name="google-site-verification" content="abc123XYZ_token" />'
+        self.assertEqual(gsc_setup.extract_token(raw_meta), "abc123XYZ_token")
+        self.assertEqual(gsc_setup.extract_token("plain_token_999"), "plain_token_999")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dummy_layout = Path(tmpdir) / "BaseLayout.astro"
+            dummy_layout.write_text(
+                "const rawVerification = (\n"
+                "  process.env.GOOGLE_SITE_VERIFICATION ||\n"
+                "  ''\n"
+                ").trim();\n",
+                encoding="utf-8",
+            )
+            changed = gsc_setup.inject_token_into_base_layout(raw_meta, layout_path=dummy_layout)
+            self.assertTrue(changed)
+            self.assertIn("'abc123XYZ_token'", dummy_layout.read_text(encoding="utf-8"))
 
     def test_end_to_end_pipeline_creates_markdown_and_updates_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

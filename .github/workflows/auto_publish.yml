@@ -33,6 +33,8 @@ jobs:
       X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
       X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      GOOGLE_SITE_VERIFICATION: ${{ secrets.GOOGLE_SITE_VERIFICATION }}
+      PUBLIC_GOOGLE_SITE_VERIFICATION: ${{ secrets.GOOGLE_SITE_VERIFICATION }}
       MAX_ITEMS_PER_RUN: ${{ github.event.inputs.max_items || '2' }}
       ASTRO_TELEMETRY_DISABLED: '1'
 

@@ -6,6 +6,7 @@ interface Props {
   description?: string;
   ogType?: 'website' | 'article';
   publishedTime?: string;
+  googleSiteVerification?: string;
 }
 
 const {
@@ -13,7 +14,21 @@ const {
   description = '海外のDTMプラグイン・ソフト音源の最新セール情報・期間限定無料配布（Freebie）情報をAIで最速解説するDTMer向け特化メディア',
   ogType = 'website',
   publishedTime,
+  googleSiteVerification,
 } = Astro.props;
+
+const rawVerification = (
+  googleSiteVerification ||
+  import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION ||
+  import.meta.env.GOOGLE_SITE_VERIFICATION ||
+  process.env.GOOGLE_SITE_VERIFICATION ||
+  ''
+).trim();
+
+// <meta name="google-site-verification" content="XXX" /> 形式がそのまま渡されても content 値だけを安全に抽出
+const extractedVerification = rawVerification.includes('content=')
+  ? (rawVerification.match(/content=["']([^"']+)["']/i)?.[1] ?? rawVerification)
+  : rawVerification;
 
 const fullTitle = `${title} | SYNTH & PLUGIN DEAL RADAR`;
 const siteBase = (Astro.site?.toString() || 'https://dtm-deals-autopilot.pages.dev').replace(/\/$/, '');
@@ -26,6 +41,9 @@ const canonicalUrl = new URL(Astro.url.pathname, siteBase).toString();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {extractedVerification && (
+      <meta name="google-site-verification" content={extractedVerification} />
+    )}
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate" type="application/rss+xml" title="SYNTH & PLUGIN DEAL RADAR RSS" href="/rss.xml" />
