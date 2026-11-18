@@ -11,7 +11,8 @@ from slugify import slugify
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+FALLBACK_MODELS = ["gemini-3.8-flash", "gemini-2.5-flash"]
 
 
 class DealArticleOutput(BaseModel):
