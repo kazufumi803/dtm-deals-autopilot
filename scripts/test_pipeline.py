@@ -141,6 +141,40 @@ class TestDTMDealsPipeline(unittest.TestCase):
                 )
                 self.assertFalse(result)
 
+    def test_publisher_webhook_fallback_when_x_fails(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "X_API_KEY": "k",
+                "X_API_SECRET": "s",
+                "X_ACCESS_TOKEN": "t",
+                "X_ACCESS_TOKEN_SECRET": "ts",
+                "SITE_URL": "https://dtm-deals-autopilot.pages.dev",
+                "WEBHOOK_URL": "https://hooks.example.com/webhook/123",
+            },
+            clear=False,
+        ):
+            with patch("publisher.tweepy.Client") as mock_client_cls:
+                mock_instance = MagicMock()
+                mock_instance.create_tweet.side_effect = RuntimeError("401 Unauthorized")
+                mock_client_cls.return_value = mock_instance
+
+                with patch("publisher.requests.post") as mock_post:
+                    mock_resp = MagicMock()
+                    mock_resp.status_code = 200
+                    mock_post.return_value = mock_resp
+
+                    result = publisher.post_to_x(
+                        tweet_text="【無料】ヴィンテージEQ配布中！ #DTM #プラグインセール",
+                        slug="free-vintage-eq",
+                        max_retries=1,
+                        backoff_sec=0.01,
+                    )
+                    self.assertTrue(result)
+                    mock_post.assert_called_once()
+                    _, kwargs = mock_post.call_args
+                    self.assertIn("https://dtm-deals-autopilot.pages.dev/deals/free-vintage-eq", kwargs["json"]["content"])
+
     def test_end_to_end_pipeline_creates_markdown_and_updates_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
