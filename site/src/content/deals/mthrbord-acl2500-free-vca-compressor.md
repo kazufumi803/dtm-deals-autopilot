@@ -16,3 +16,12 @@ MTHRBORD.STUDIOの「ACL2500」は、実機API 2500の徹底的な実測デー�
 - 対応OS：macOS / Windows
 - 形式：主要なプラグインフォーマットに対応
 - 注意事項：詳細な動作環境やインストールの詳細については、MTHRBORD.STUDIOの公式配布ページをご確認ください。
+
+## あわせてチェックしたいDTM機材・音源（Amazon）
+
+プラグインやソフト音源のポテンシャルを最大限に引き出すための定番DTM機材・関連アイテムもAmazonでチェックできます：
+
+- 🎧 **[定番モニターヘッドホン・モニタースピーカーを探す（Amazon）](https://www.amazon.co.jp/s?k=%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%BC%E3%83%98%E3%83%83%E3%83%89%E3%83%9B%E3%83%B3+DTM&tag=dtmdeals803-22)**
+- 🎛️ **[人気オーディオインターフェース一覧を見る（Amazon）](https://www.amazon.co.jp/s?k=%E3%82%AA%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%95%E3%82%A7%E3%83%BC%E3%82%B9+DTM&tag=dtmdeals803-22)**
+- 🎹 **[MIDIキーボード・パッドコントローラーを探す（Amazon）](https://www.amazon.co.jp/s?k=MIDI%E3%82%AD%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%89+DTM&tag=dtmdeals803-22)**
+- 💿 **[DTMソフト音源・DAW・プラグインセール品を探す（Amazon）](https://www.amazon.co.jp/s?k=DTM+%E3%82%BD%E3%83%95%E3%83%88%E9%9F%B3%E6%BA%90+%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3&tag=dtmdeals803-22)**

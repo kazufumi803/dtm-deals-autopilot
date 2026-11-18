@@ -22,3 +22,12 @@ affiliateUrl: "https://www.pluginboutique.com/"
 - **価格**: 通常価格 $49.00 → **期間限定 $0（100% OFF 無料）**
 - **対応フォーマット**: VST3 / AU / AAX（Windows 10以降 / macOS 11以降・Apple Siliconネイティブ対応）
 - **注意事項**: ライセンス認証には無料アカウント登録が必要です。配布終了日時は予告なく変更される場合があるため、お早めに公式ストアより入手してください。
+
+## あわせてチェックしたいDTM機材・音源（Amazon）
+
+プラグインやソフト音源のポテンシャルを最大限に引き出すための定番DTM機材・関連アイテムもAmazonでチェックできます：
+
+- 🎧 **[定番モニターヘッドホン・モニタースピーカーを探す（Amazon）](https://www.amazon.co.jp/s?k=%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%BC%E3%83%98%E3%83%83%E3%83%89%E3%83%9B%E3%83%B3+DTM&tag=dtmdeals803-22)**
+- 🎛️ **[人気オーディオインターフェース一覧を見る（Amazon）](https://www.amazon.co.jp/s?k=%E3%82%AA%E3%83%BC%E3%83%87%E3%82%A3%E3%82%AA%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%95%E3%82%A7%E3%83%BC%E3%82%B9+DTM&tag=dtmdeals803-22)**
+- 🎹 **[MIDIキーボード・パッドコントローラーを探す（Amazon）](https://www.amazon.co.jp/s?k=MIDI%E3%82%AD%E3%83%BC%E3%83%9C%E3%83%BC%E3%83%89+DTM&tag=dtmdeals803-22)**
+- 💿 **[DTMソフト音源・DAW・プラグインセール品を探す（Amazon）](https://www.amazon.co.jp/s?k=DTM+%E3%82%BD%E3%83%95%E3%83%88%E9%9F%B3%E6%BA%90+%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3&tag=dtmdeals803-22)**
