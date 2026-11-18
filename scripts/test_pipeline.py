@@ -175,6 +175,33 @@ class TestDTMDealsPipeline(unittest.TestCase):
                     _, kwargs = mock_post.call_args
                     self.assertIn("https://dtm-deals-autopilot.pages.dev/deals/free-vintage-eq", kwargs["json"]["content"])
 
+    def test_pending_tweets_cleaned_up_on_401_without_warnings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pending_path = Path(tmpdir) / "pending_tweets.json"
+            pending_path.write_text(
+                json.dumps([{"slug": "test-deal", "tweet_text": "テスト #DTM"}]),
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "X_API_KEY": "k",
+                    "X_API_SECRET": "s",
+                    "X_ACCESS_TOKEN": "t",
+                    "X_ACCESS_TOKEN_SECRET": "ts",
+                },
+                clear=False,
+            ):
+                os.environ.pop("WEBHOOK_URL", None)
+                with patch("publisher.tweepy.Client") as mock_client_cls:
+                    mock_instance = MagicMock()
+                    mock_instance.create_tweet.side_effect = RuntimeError("401 Unauthorized")
+                    mock_client_cls.return_value = mock_instance
+
+                    pipeline_main.flush_pending_tweets(pending_path=pending_path, delay_between_sec=0)
+                    cleaned = json.loads(pending_path.read_text(encoding="utf-8"))
+                    self.assertEqual(cleaned, [])
+
     def test_end_to_end_pipeline_creates_markdown_and_updates_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)

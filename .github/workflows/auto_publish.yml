@@ -56,8 +56,7 @@ jobs:
 
       - name: Run fetcher, affiliate converter & Gemini article generator
         run: |
-          # 前回未送信分のX投稿を消化し、今回の新規記事を生成・キューイング
-          python scripts/main.py --defer-x --max-items "${MAX_ITEMS_PER_RUN}"
+          python scripts/main.py --max-items "${MAX_ITEMS_PER_RUN}"
 
       - name: Set up Node.js & Verify Astro static site build
         uses: actions/setup-node@v4
@@ -82,24 +81,8 @@ jobs:
           git add data/posted_ids.json data/pending_tweets.json site/src/content/deals/
           if git diff --staged --quiet; then
             echo "No new deals or state changes to commit."
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore: auto-publish new deals [skip ci]"
-            git pull --rebase origin "${GITHUB_REF_NAME}" || true
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-            echo "pushed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Wait for static site deployment & Post pending deals to X
-        if: steps.commit_deals.outputs.pushed == 'true'
-        run: |
-          echo "Waiting 60 seconds for static site deployment before posting to X..."
-          sleep 60
-          python scripts/main.py --post-pending
-
-          git add data/pending_tweets.json
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: update pending tweets queue [skip ci]"
             git pull --rebase origin "${GITHUB_REF_NAME}" || true
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

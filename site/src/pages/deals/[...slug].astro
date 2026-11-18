@@ -18,6 +18,17 @@ const { deal } = Astro.props;
 const { Content } = await deal.render();
 const isFree = deal.data.category === 'Free';
 
+const plainSummary = deal.body
+  .replace(/^#+\s+.*$/gm, '')
+  .replace(/\*\*([^*]+)\*\*/g, '$1')
+  .replace(/\*([^*]+)\*/g, '$1')
+  .replace(/`([^`]+)`/g, '$1')
+  .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  .replace(/^[-\s*]+/gm, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, 160);
+
 const formattedDate = deal.data.pubDate.toLocaleDateString('ja-JP', {
   year: 'numeric',
   month: 'long',
@@ -25,7 +36,12 @@ const formattedDate = deal.data.pubDate.toLocaleDateString('ja-JP', {
 });
 ---
 
-<BaseLayout title={deal.data.title}>
+<BaseLayout
+  title={deal.data.title}
+  description={plainSummary || deal.data.title}
+  ogType="article"
+  publishedTime={deal.data.pubDate.toISOString()}
+>
   <article class="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
     <!-- Breadcrumb -->
     <nav class="mb-6 text-xs font-mono text-slate-400 flex items-center gap-2">

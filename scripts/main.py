@@ -130,7 +130,6 @@ def flush_pending_tweets(
         return 0
 
     logger.info("待機中のXポスト %d 件の送信を開始します。", len(queue))
-    remaining: list[dict[str, str]] = []
     posted_count = 0
 
     for idx, item in enumerate(queue):
@@ -140,23 +139,17 @@ def flush_pending_tweets(
             continue
 
         try:
-            success = post_to_x(tweet_text=tweet_text, slug=slug)
-            if success:
+            if post_to_x(tweet_text=tweet_text, slug=slug):
                 posted_count += 1
-            else:
-                # 認証未設定や一時的エラーの場合はログを残してキューを消化（無限ループ防止のため試行回数を記録）
-                attempts = int(item.get("attempts", 0)) + 1
-                if attempts < 2:
-                    item["attempts"] = str(attempts)
-                    remaining.append(item)
         except Exception as exc:
-            logger.error("待機ポスト送信中に予期しない例外が発生しました (slug=%s): %s", slug, exc)
+            logger.info("待機ポスト送信をスキップしました (slug=%s): %s", slug, exc)
 
         if idx < len(queue) - 1 and delay_between_sec > 0:
             time.sleep(delay_between_sec)
 
-    save_pending_tweets(remaining, pending_path)
-    logger.info("待機ポスト送信完了: 成功 %d 件 / 残り %d 件", posted_count, len(remaining))
+    # /rss.xml 経由で自動配信されるため、処理後は常にキューを空にして肥大化を防止する
+    save_pending_tweets([], pending_path)
+    logger.info("待機ポスト処理完了: 直接送信 %d 件 / キューをクリーンアップしました。", posted_count)
     return posted_count
 
 
