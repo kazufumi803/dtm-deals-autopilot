@@ -207,7 +207,8 @@ def run_pipeline(
         english_title = entry["title"]
         english_summary = entry.get("summary_text") or ""
         source_name = entry.get("source") or ""
-        pub_date = entry.get("pub_date") or datetime.now(timezone.utc).isoformat()
+        # サイトへの公開日時（現在時刻）を pubDate とすることで、常に新着1位およびRSS先頭に配置してdlvr.itに即時検知させる
+        pub_date = datetime.now(timezone.utc).isoformat()
 
         logger.info("エントリ処理開始 [%s]: %s", entry_id, english_title)
 
