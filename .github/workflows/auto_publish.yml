@@ -1,9 +1,10 @@
 name: Auto Publish DTM Deals & Freebies
 
 on:
-  schedule:
-    # 日本時間の朝7時 (22:00 UTC) と 夜19時 (10:00 UTC) に定期実行
-    - cron: '0 22,10 * * *'
+  # 定期実行は現在一時停止中（再開する場合は以下のコメントアウトを解除）
+  # schedule:
+  #   # 日本時間の朝7時 (22:00 UTC) と 夜19時 (10:00 UTC) に定期実行
+  #   - cron: '0 22,10 * * *'
   workflow_dispatch:
     inputs:
       max_items:
